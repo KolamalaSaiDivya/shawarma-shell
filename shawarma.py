@@ -4,6 +4,7 @@ import subprocess
 import readline
 import signal
 import rlcompleter
+import difflib
 
 from colorama import init, Fore, Style
 
@@ -27,7 +28,7 @@ def handle_sigint(signum, frame):
 signal.signal(signal.SIGINT, handle_sigint)
 
 
-def completer(text, state):
+def get_all_commands():
 
     commands = []
 
@@ -38,19 +39,44 @@ def completer(text, state):
         if os.path.exists(path):
 
             try:
-                for cmd in os.listdir(path):
-                    commands.append(cmd)
+                commands.extend(os.listdir(path))
 
             except PermissionError:
                 pass
+
+    commands.extend(aliases.keys())
+
+    return sorted(set(commands))
+
+
+def suggest_command(command):
+
+    commands = get_all_commands()
+
+    matches = difflib.get_close_matches(
+        command,
+        commands,
+        n=1,
+        cutoff=0.6
+    )
+
+    if matches:
+
+        print(
+            f"{Fore.YELLOW}"
+            f"Did you mean: {matches[0]} ?"
+        )
+
+
+def completer(text, state):
+
+    commands = get_all_commands()
 
     try:
         commands.extend(os.listdir("."))
 
     except PermissionError:
         pass
-
-    commands.extend(aliases.keys())
 
     commands = sorted(set(commands))
 
@@ -243,6 +269,8 @@ while True:
                     f"{Fore.RED}File or command not found"
                 )
 
+                suggest_command(command)
+
         # =========================
         # OUTPUT REDIRECTION
         # =========================
@@ -277,6 +305,8 @@ while True:
                 print(
                     f"{Fore.RED}Command not found"
                 )
+
+                suggest_command(command)
 
         # =========================
         # MULTI-PIPE SUPPORT
@@ -333,6 +363,8 @@ while True:
                     f"{Fore.RED}Command not found"
                 )
 
+                suggest_command(command)
+
         # =========================
         # NORMAL + BACKGROUND EXECUTION
         # =========================
@@ -369,9 +401,12 @@ while True:
                     subprocess.run([command] + args)
 
             except FileNotFoundError:
+
                 print(
                     f"{Fore.RED}Command not found"
                 )
+
+                suggest_command(command)
 
     # =========================
     # SAVE HISTORY
