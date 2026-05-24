@@ -6,6 +6,9 @@ import signal
 import rlcompleter
 
 HISTORY_FILE = "history.txt"
+ALIAS_FILE = "aliases.txt"
+
+aliases = {}
 
 
 def handle_sigint(signum, frame):
@@ -34,8 +37,11 @@ def completer(text, state):
 
     try:
         commands.extend(os.listdir("."))
+
     except PermissionError:
         pass
+
+    commands.extend(aliases.keys())
 
     commands = sorted(set(commands))
 
@@ -50,12 +56,39 @@ def completer(text, state):
 readline.set_completer(completer)
 readline.parse_and_bind("tab: complete")
 
+# =========================
+# LOAD HISTORY
+# =========================
+
 try:
     readline.read_history_file(HISTORY_FILE)
 
 except FileNotFoundError:
     open(HISTORY_FILE, "w").close()
 
+# =========================
+# LOAD ALIASES
+# =========================
+
+try:
+
+    with open(ALIAS_FILE, "r") as file:
+
+        for line in file:
+
+            if "=" in line:
+
+                name, value = line.strip().split("=", 1)
+
+                aliases[name] = value
+
+except FileNotFoundError:
+
+    open(ALIAS_FILE, "w").close()
+
+# =========================
+# MAIN SHELL LOOP
+# =========================
 
 while True:
 
@@ -78,6 +111,22 @@ while True:
     command = parts[0]
     args = parts[1:]
 
+    # =========================
+    # ALIAS EXPANSION
+    # =========================
+
+    if command in aliases:
+
+        expanded = shlex.split(aliases[command])
+
+        command = expanded[0]
+
+        args = expanded[1:] + args
+
+    # =========================
+    # BUILT-IN COMMANDS
+    # =========================
+
     if command == "exit":
 
         print("Goodbye!")
@@ -90,6 +139,7 @@ while True:
     elif command == "cd":
 
         if len(args) == 0:
+
             print("Usage: cd <folder>")
 
         else:
@@ -108,6 +158,39 @@ while True:
 
         print(" ".join(args))
 
+    # =========================
+    # ALIAS COMMAND
+    # =========================
+
+    elif command == "alias":
+
+        if len(args) == 0:
+
+            for name, value in aliases.items():
+                print(f"{name} = {value}")
+
+        else:
+
+            alias_input = " ".join(args)
+
+            if "=" not in alias_input:
+
+                print('Usage: alias name="command"')
+
+            else:
+
+                name, value = alias_input.split("=", 1)
+
+                name = name.strip()
+                value = value.strip('"')
+
+                aliases[name] = value
+
+                with open(ALIAS_FILE, "a") as file:
+                    file.write(f"{name}={value}\n")
+
+                print(f"Alias '{name}' added.")
+
     elif command == "help":
 
         print("Built-in commands:")
@@ -115,8 +198,13 @@ while True:
         print("  cd <folder>")
         print("  clear")
         print("  echo <text>")
+        print('  alias name="command"')
         print("  help")
         print("  exit")
+
+    # =========================
+    # EXTERNAL COMMANDS
+    # =========================
 
     else:
 
@@ -244,5 +332,9 @@ while True:
 
             except FileNotFoundError:
                 print("Command not found")
+
+    # =========================
+    # SAVE HISTORY
+    # =========================
 
     readline.write_history_file(HISTORY_FILE)
