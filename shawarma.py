@@ -158,10 +158,6 @@ while True:
 
         print(" ".join(args))
 
-    # =========================
-    # ALIAS COMMAND
-    # =========================
-
     elif command == "alias":
 
         if len(args) == 0:
@@ -209,10 +205,35 @@ while True:
     else:
 
         # =========================
+        # INPUT REDIRECTION
+        # =========================
+
+        if "<" in raw_input:
+
+            command_part, file_part = raw_input.split("<")
+
+            command_part = command_part.strip()
+            file_name = file_part.strip()
+
+            parsed_command = shlex.split(command_part)
+
+            try:
+
+                with open(file_name, "r") as file:
+
+                    subprocess.run(
+                        parsed_command,
+                        stdin=file
+                    )
+
+            except FileNotFoundError:
+                print("File or command not found")
+
+        # =========================
         # OUTPUT REDIRECTION
         # =========================
 
-        if ">" in raw_input:
+        elif ">" in raw_input:
 
             append_mode = ">>" in raw_input
 
@@ -260,7 +281,6 @@ while True:
 
                 for i, cmd in enumerate(pipe_commands):
 
-                    # First command
                     if i == 0:
 
                         process = subprocess.Popen(
@@ -268,7 +288,6 @@ while True:
                             stdout=subprocess.PIPE
                         )
 
-                    # Last command
                     elif i == len(pipe_commands) - 1:
 
                         process = subprocess.Popen(
@@ -276,7 +295,6 @@ while True:
                             stdin=previous_process.stdout
                         )
 
-                    # Middle commands
                     else:
 
                         process = subprocess.Popen(
