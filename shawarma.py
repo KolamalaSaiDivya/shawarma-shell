@@ -1,6 +1,14 @@
 import os
 import shlex
 import subprocess
+import readline
+
+HISTORY_FILE = "history.txt"
+
+try:
+    readline.read_history_file(HISTORY_FILE)
+except FileNotFoundError:
+    open(HISTORY_FILE, "w").close()
 
 while True:
     raw_input = input("shawarma> ")
@@ -70,25 +78,49 @@ while True:
 
         elif "|" in raw_input:
 
-            pipe_parts = raw_input.split("|")
-
-            left_command = shlex.split(pipe_parts[0].strip())
-            right_command = shlex.split(pipe_parts[1].strip())
-
             try:
-                left_process = subprocess.Popen(
-                    left_command,
-                    stdout=subprocess.PIPE
-                )
 
-                right_process = subprocess.Popen(
-                    right_command,
-                    stdin=left_process.stdout
-                )
+                pipe_commands = [
+                    shlex.split(part.strip())
+                    for part in raw_input.split("|")
+                ]
 
-                left_process.stdout.close()
+                processes = []
 
-                right_process.communicate()
+                previous_process = None
+
+                for i, cmd in enumerate(pipe_commands):
+
+                    if i == 0:
+
+                        process = subprocess.Popen(
+                            cmd,
+                            stdout=subprocess.PIPE
+                        )
+
+                    elif i == len(pipe_commands) - 1:
+
+                        process = subprocess.Popen(
+                            cmd,
+                            stdin=previous_process.stdout
+                        )
+
+                    else:
+
+                        process = subprocess.Popen(
+                            cmd,
+                            stdin=previous_process.stdout,
+                            stdout=subprocess.PIPE
+                        )
+
+                    if previous_process:
+                        previous_process.stdout.close()
+
+                    processes.append(process)
+
+                    previous_process = process
+
+                processes[-1].communicate()
 
             except FileNotFoundError:
                 print("Command not found")
@@ -121,3 +153,5 @@ while True:
 
             except FileNotFoundError:
                 print("Command not found")
+
+                readline.write_history_file(HISTORY_FILE)
