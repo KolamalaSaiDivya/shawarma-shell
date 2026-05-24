@@ -5,8 +5,10 @@ import readline
 import signal
 import rlcompleter
 
-HISTORY_FILE = "history.txt"
-ALIAS_FILE = "aliases.txt"
+from core.builtins import run_builtin
+
+HISTORY_FILE = "history/history.txt"
+ALIAS_FILE = "config/aliases.txt"
 
 aliases = {}
 
@@ -60,6 +62,8 @@ readline.parse_and_bind("tab: complete")
 # LOAD HISTORY
 # =========================
 
+os.makedirs("history", exist_ok=True)
+
 try:
     readline.read_history_file(HISTORY_FILE)
 
@@ -69,6 +73,8 @@ except FileNotFoundError:
 # =========================
 # LOAD ALIASES
 # =========================
+
+os.makedirs("config", exist_ok=True)
 
 try:
 
@@ -132,71 +138,9 @@ while True:
         print("Goodbye!")
         break
 
-    elif command == "pwd":
+    elif run_builtin(command, args, aliases, ALIAS_FILE):
 
-        print(os.getcwd())
-
-    elif command == "cd":
-
-        if len(args) == 0:
-
-            print("Usage: cd <folder>")
-
-        else:
-
-            try:
-                os.chdir(args[0])
-
-            except FileNotFoundError:
-                print("Directory not found")
-
-    elif command == "clear":
-
-        os.system("cls" if os.name == "nt" else "clear")
-
-    elif command == "echo":
-
-        print(" ".join(args))
-
-    elif command == "alias":
-
-        if len(args) == 0:
-
-            for name, value in aliases.items():
-                print(f"{name} = {value}")
-
-        else:
-
-            alias_input = " ".join(args)
-
-            if "=" not in alias_input:
-
-                print('Usage: alias name="command"')
-
-            else:
-
-                name, value = alias_input.split("=", 1)
-
-                name = name.strip()
-                value = value.strip('"')
-
-                aliases[name] = value
-
-                with open(ALIAS_FILE, "a") as file:
-                    file.write(f"{name}={value}\n")
-
-                print(f"Alias '{name}' added.")
-
-    elif command == "help":
-
-        print("Built-in commands:")
-        print("  pwd")
-        print("  cd <folder>")
-        print("  clear")
-        print("  echo <text>")
-        print('  alias name="command"')
-        print("  help")
-        print("  exit")
+        pass
 
     # =========================
     # EXTERNAL COMMANDS
