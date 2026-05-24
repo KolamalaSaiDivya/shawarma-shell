@@ -2,16 +2,73 @@ import os
 import shlex
 import subprocess
 import readline
+import signal
+import rlcompleter
 
 HISTORY_FILE = "history.txt"
 
+
+def handle_sigint(signum, frame):
+    print("\nUse 'exit' to quit Shawarma.")
+
+
+signal.signal(signal.SIGINT, handle_sigint)
+
+
+def completer(text, state):
+
+    commands = []
+
+    paths = os.environ.get("PATH", "").split(os.pathsep)
+
+    for path in paths:
+
+        if os.path.exists(path):
+
+            try:
+                for cmd in os.listdir(path):
+                    commands.append(cmd)
+
+            except PermissionError:
+                pass
+
+    try:
+        commands.extend(os.listdir("."))
+    except PermissionError:
+        pass
+
+    commands = sorted(set(commands))
+
+    matches = [cmd for cmd in commands if cmd.startswith(text)]
+
+    if state < len(matches):
+        return matches[state]
+
+    return None
+
+
+readline.set_completer(completer)
+readline.parse_and_bind("tab: complete")
+
 try:
     readline.read_history_file(HISTORY_FILE)
+
 except FileNotFoundError:
     open(HISTORY_FILE, "w").close()
 
+
 while True:
-    raw_input = input("shawarma> ")
+
+    try:
+        raw_input = input("shawarma> ")
+
+    except KeyboardInterrupt:
+        print("\nUse 'exit' to quit Shawarma.")
+        continue
+
+    except EOFError:
+        print("\nGoodbye!")
+        break
 
     parts = shlex.split(raw_input)
 
@@ -22,36 +79,50 @@ while True:
     args = parts[1:]
 
     if command == "exit":
+
         print("Goodbye!")
         break
 
     elif command == "pwd":
+
         print(os.getcwd())
 
     elif command == "cd":
+
         if len(args) == 0:
             print("Usage: cd <folder>")
+
         else:
+
             try:
                 os.chdir(args[0])
+
             except FileNotFoundError:
                 print("Directory not found")
 
     elif command == "clear":
+
         os.system("cls" if os.name == "nt" else "clear")
 
     elif command == "echo":
+
         print(" ".join(args))
 
     elif command == "help":
+
         print("Built-in commands:")
         print("  pwd")
         print("  cd <folder>")
         print("  clear")
         print("  echo <text>")
+        print("  help")
         print("  exit")
 
     else:
+
+        # =========================
+        # OUTPUT REDIRECTION
+        # =========================
 
         if ">" in raw_input:
 
@@ -59,6 +130,7 @@ while True:
 
             if append_mode:
                 command_part, file_part = raw_input.split(">>")
+
             else:
                 command_part, file_part = raw_input.split(">")
 
@@ -70,11 +142,20 @@ while True:
             mode = "a" if append_mode else "w"
 
             try:
+
                 with open(file_name, mode) as file:
-                    subprocess.run(parsed_command, stdout=file)
+
+                    subprocess.run(
+                        parsed_command,
+                        stdout=file
+                    )
 
             except FileNotFoundError:
                 print("Command not found")
+
+        # =========================
+        # MULTI-PIPE SUPPORT
+        # =========================
 
         elif "|" in raw_input:
 
@@ -91,6 +172,7 @@ while True:
 
                 for i, cmd in enumerate(pipe_commands):
 
+                    # First command
                     if i == 0:
 
                         process = subprocess.Popen(
@@ -98,6 +180,7 @@ while True:
                             stdout=subprocess.PIPE
                         )
 
+                    # Last command
                     elif i == len(pipe_commands) - 1:
 
                         process = subprocess.Popen(
@@ -105,6 +188,7 @@ while True:
                             stdin=previous_process.stdout
                         )
 
+                    # Middle commands
                     else:
 
                         process = subprocess.Popen(
@@ -125,11 +209,16 @@ while True:
             except FileNotFoundError:
                 print("Command not found")
 
+        # =========================
+        # NORMAL + BACKGROUND EXECUTION
+        # =========================
+
         else:
 
             background = False
 
             if raw_input.endswith("&"):
+
                 background = True
 
                 raw_input = raw_input[:-1].strip()
@@ -145,7 +234,9 @@ while True:
 
                     process = subprocess.Popen([command] + args)
 
-                    print(f"Started background process PID: {process.pid}")
+                    print(
+                        f"Started background process PID: {process.pid}"
+                    )
 
                 else:
 
@@ -154,4 +245,4 @@ while True:
             except FileNotFoundError:
                 print("Command not found")
 
-                readline.write_history_file(HISTORY_FILE)
+    readline.write_history_file(HISTORY_FILE)
