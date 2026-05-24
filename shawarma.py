@@ -13,6 +13,7 @@ init(autoreset=True)
 
 HISTORY_FILE = "history/history.txt"
 ALIAS_FILE = "config/aliases.txt"
+RC_FILE = ".shawarmarc"
 
 aliases = {}
 
@@ -61,6 +62,46 @@ def completer(text, state):
     return None
 
 
+def execute_rc_file():
+
+    if not os.path.exists(RC_FILE):
+        return
+
+    try:
+
+        with open(RC_FILE, "r") as file:
+
+            for line in file:
+
+                line = line.strip()
+
+                if not line:
+                    continue
+
+                if line.startswith("alias"):
+
+                    alias_command = line[len("alias"):].strip()
+
+                    if "=" in alias_command:
+
+                        name, value = alias_command.split("=", 1)
+
+                        name = name.strip()
+                        value = value.strip('"')
+
+                        aliases[name] = value
+
+                elif line.startswith("echo"):
+
+                    print(line[len("echo"):].strip())
+
+    except Exception as e:
+
+        print(
+            f"{Fore.RED}Error loading .shawarmarc: {e}"
+        )
+
+
 readline.set_completer(completer)
 readline.parse_and_bind("tab: complete")
 
@@ -97,6 +138,12 @@ try:
 except FileNotFoundError:
 
     open(ALIAS_FILE, "w").close()
+
+# =========================
+# LOAD RC FILE
+# =========================
+
+execute_rc_file()
 
 # =========================
 # MAIN SHELL LOOP
