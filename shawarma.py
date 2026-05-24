@@ -5,7 +5,11 @@ import readline
 import signal
 import rlcompleter
 
+from colorama import init, Fore, Style
+
 from core.builtins import run_builtin
+
+init(autoreset=True)
 
 HISTORY_FILE = "history/history.txt"
 ALIAS_FILE = "config/aliases.txt"
@@ -14,7 +18,9 @@ aliases = {}
 
 
 def handle_sigint(signum, frame):
-    print("\nUse 'exit' to quit Shawarma.")
+    print(
+        f"\n{Fore.RED}Use 'exit' to quit Shawarma.{Style.RESET_ALL}"
+    )
 
 
 signal.signal(signal.SIGINT, handle_sigint)
@@ -98,15 +104,27 @@ except FileNotFoundError:
 
 while True:
 
+    current_dir = os.getcwd()
+
+    prompt = (
+        f"{Fore.YELLOW}shawarma "
+        f"{Fore.CYAN}{current_dir} "
+        f"{Fore.GREEN}>{Style.RESET_ALL} "
+    )
+
     try:
-        raw_input = input("shawarma> ")
+        raw_input = input(prompt)
 
     except KeyboardInterrupt:
-        print("\nUse 'exit' to quit Shawarma.")
+        print(
+            f"\n{Fore.RED}Use 'exit' to quit Shawarma."
+        )
         continue
 
     except EOFError:
-        print("\nGoodbye!")
+        print(
+            f"\n{Fore.GREEN}Goodbye!"
+        )
         break
 
     parts = shlex.split(raw_input)
@@ -135,7 +153,10 @@ while True:
 
     if command == "exit":
 
-        print("Goodbye!")
+        print(
+            f"{Fore.GREEN}Goodbye!"
+        )
+
         break
 
     elif run_builtin(command, args, aliases, ALIAS_FILE):
@@ -171,7 +192,9 @@ while True:
                     )
 
             except FileNotFoundError:
-                print("File or command not found")
+                print(
+                    f"{Fore.RED}File or command not found"
+                )
 
         # =========================
         # OUTPUT REDIRECTION
@@ -204,7 +227,9 @@ while True:
                     )
 
             except FileNotFoundError:
-                print("Command not found")
+                print(
+                    f"{Fore.RED}Command not found"
+                )
 
         # =========================
         # MULTI-PIPE SUPPORT
@@ -257,7 +282,9 @@ while True:
                 processes[-1].communicate()
 
             except FileNotFoundError:
-                print("Command not found")
+                print(
+                    f"{Fore.RED}Command not found"
+                )
 
         # =========================
         # NORMAL + BACKGROUND EXECUTION
@@ -285,7 +312,9 @@ while True:
                     process = subprocess.Popen([command] + args)
 
                     print(
-                        f"Started background process PID: {process.pid}"
+                        f"{Fore.GREEN}"
+                        f"Started background process "
+                        f"PID: {process.pid}"
                     )
 
                 else:
@@ -293,7 +322,9 @@ while True:
                     subprocess.run([command] + args)
 
             except FileNotFoundError:
-                print("Command not found")
+                print(
+                    f"{Fore.RED}Command not found"
+                )
 
     # =========================
     # SAVE HISTORY
